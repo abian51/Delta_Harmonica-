@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Delta Harmonica Studio",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "dhs",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
+

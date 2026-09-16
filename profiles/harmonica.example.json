@@ -1,0 +1,11 @@
+{
+  "name": "候选口琴映射（待用户核对）",
+  "base_midi_note": 60,
+  "natural_keys": ["Z", "X", "C", "V", "B", "N", "M", ","],
+  "key_codes": {"Z": 29, "X": 27, "C": 6, "V": 25, "B": 5, "N": 17, "M": 16, ",": 54},
+  "accidental_modifier": {"kind": "mouse", "button": "left", "code": 1},
+  "octave_up_modifier": {"kind": "mouse", "button": "right", "code": 2},
+  "octave_down_modifier": {"kind": "mouse", "button": "middle", "code": 3},
+  "warning": "此映射只用于桌面测试，游戏内音高和键位尚未验证。"
+}
+
