@@ -15,8 +15,10 @@ def convert(args: argparse.Namespace) -> int:
     report = convert_midi(args.midi, args.output, profile_path=args.profile,
                           tracks=set(args.track) if args.track else None, polyphony=args.polyphony,
                           transpose=args.transpose, speed=args.speed, min_hold_ms=args.min_hold,
-                          safe_gap_ms=args.safe_gap, clip_start_source_ms=args.clip_start,
-                          clip_end_source_ms=args.clip_end)
+                          safe_gap_ms=args.safe_gap, out_of_range=args.out_of_range,
+                          clip_start_source_ms=args.clip_start,
+                          clip_end_source_ms=args.clip_end,
+                          timing_variation_ms=args.timing_variation)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
 
@@ -58,10 +60,13 @@ def main(argv: list[str] | None = None) -> int:
     conv.add_argument("--profile", default=str(DEFAULT_PROFILE))
     conv.add_argument("--track", type=int, action="append")
     conv.add_argument("--polyphony", choices=["reject", "highest", "lowest"], default="reject")
+    conv.add_argument("--out-of-range", choices=["reject", "octave_fold"], default="reject")
     conv.add_argument("--transpose", type=int, default=0); conv.add_argument("--speed", type=float, default=1.0)
     conv.add_argument("--min-hold", type=int, default=35); conv.add_argument("--safe-gap", type=int, default=5)
     conv.add_argument("--clip-start", type=int, default=0, help="Start of source MIDI segment in ms")
     conv.add_argument("--clip-end", type=int, help="End of source MIDI segment in ms")
+    conv.add_argument("--timing-variation", type=int, default=0,
+                      help="Optional random per-note timing variation, 0-15 ms (default: 0)")
     gg_scan = sub.add_parser("gg-list", help="List macros through the local GG Engine API")
     gg_create_parser = sub.add_parser("gg-create", help="Create a macro through the local GG Engine API")
     gg_create_parser.add_argument("events"); gg_create_parser.add_argument("--name", required=True)

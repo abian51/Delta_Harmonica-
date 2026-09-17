@@ -53,8 +53,10 @@ class Studio(tk.Tk):
                   foreground="#555").pack(fill="x", pady=(8, 0))
 
         self.name = tk.StringVar(); self.path = tk.StringVar(); self.polyphony = tk.StringVar(value="reject")
+        self.out_of_range = tk.StringVar(value="reject")
         self.transpose = tk.IntVar(value=0); self.speed = tk.DoubleVar(value=1.0)
         self.min_hold = tk.IntVar(value=35); self.safe_gap = tk.IntVar(value=5)
+        self.timing_variation = tk.IntVar(value=15)
         self.clip_start_source_ms = 0.0
         self.clip_end_source_ms: float | None = None
         self.clip_text = tk.StringVar(value="全曲")
@@ -68,6 +70,8 @@ class Studio(tk.Tk):
         self.tracks.grid(row=2, column=1, sticky="ew", pady=6)
         self._row(form, 3, "多声部策略", ttk.Combobox(form, textvariable=self.polyphony,
                                                        values=("reject", "highest", "lowest"), state="readonly"))
+        self._row(form, 6, "超音域处理", ttk.Combobox(form, textvariable=self.out_of_range,
+                                                       values=("reject", "octave_fold"), state="readonly"))
         numbers = ttk.Frame(form)
         for index, (label, variable, start, end, increment) in enumerate([
             ("移调", self.transpose, -36, 36, 1),
@@ -80,12 +84,18 @@ class Studio(tk.Tk):
         ttk.Label(speed_box, text="导出倍速").pack(anchor="w")
         ttk.Combobox(speed_box, textvariable=self.speed, state="readonly", width=10,
                      values=(0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0)).pack(anchor="w")
+        jitter_box = ttk.Frame(numbers); jitter_box.grid(row=0, column=4, padx=(0, 12), sticky="ew")
+        ttk.Label(jitter_box, text="随机微调 ms").pack(anchor="w")
+        ttk.Spinbox(jitter_box, textvariable=self.timing_variation,
+                    from_=0, to=15, increment=1, width=10).pack(anchor="w")
         self._row(form, 4, "转换设置", numbers)
         clip_row = ttk.Frame(form)
         ttk.Label(clip_row, textvariable=self.clip_text).pack(side="left")
         ttk.Button(clip_row, text="恢复全曲", command=self.reset_clip).pack(side="left", padx=12)
         self._row(form, 5, "宏截取片段", clip_row)
         form.columnconfigure(1, weight=1)
+        ttk.Label(right, text="随机微调仅作用于导出的宏；试听播放基准节奏，不保证规避检测。",
+                  foreground="#795e28").pack(anchor="w", pady=(5, 0))
 
         actions = ttk.Frame(right); actions.pack(fill="x", pady=(14, 6))
         ttk.Button(actions, text="保存设置", command=self.save_current).pack(side="left")
@@ -183,7 +193,9 @@ class Studio(tk.Tk):
     @staticmethod
     def default_record(path: Path) -> dict:
         return {"name": path.stem, "midi_path": str(path.resolve()), "tracks": [], "polyphony": "reject",
+                "out_of_range": "reject",
                 "transpose": 0, "speed": 1.0, "min_hold_ms": 35, "safe_gap_ms": 5,
+                "timing_variation_ms": 15,
                 "clip_start_source_ms": 0.0, "clip_end_source_ms": None}
 
     def select_song(self, _event=None) -> None:
@@ -195,8 +207,10 @@ class Studio(tk.Tk):
         record = self.records[selection[0]]; self.current_record_path = record.get("_record_path")
         self.name.set(record.get("name", "")); self.path.set(record.get("midi_path", ""))
         self.polyphony.set(record.get("polyphony", "reject")); self.transpose.set(record.get("transpose", 0))
+        self.out_of_range.set(record.get("out_of_range", "reject"))
         self.speed.set(record.get("speed", 1.0)); self.min_hold.set(record.get("min_hold_ms", 35))
         self.safe_gap.set(record.get("safe_gap_ms", 5)); self.tracks.delete(0, "end")
+        self.timing_variation.set(record.get("timing_variation_ms", 15))
         self.set_clip(record.get("clip_start_source_ms", 0), record.get("clip_end_source_ms"))
         try:
             selected_tracks = set(record.get("tracks", []))
@@ -209,8 +223,10 @@ class Studio(tk.Tk):
     def form_record(self) -> dict:
         return {"name": self.name.get().strip(), "midi_path": self.path.get(),
                 "tracks": list(self.tracks.curselection()), "polyphony": self.polyphony.get(),
+                "out_of_range": self.out_of_range.get(),
                 "transpose": self.transpose.get(), "speed": self.speed.get(),
                 "min_hold_ms": self.min_hold.get(), "safe_gap_ms": self.safe_gap.get(),
+                "timing_variation_ms": self.timing_variation.get(),
                 "clip_start_source_ms": self.clip_start_source_ms,
                 "clip_end_source_ms": self.clip_end_source_ms}
 
@@ -247,8 +263,10 @@ class Studio(tk.Tk):
         clip_end = record.get("clip_end_source_ms")
         return convert_midi(record["midi_path"], output, profile_path=DEFAULT_PROFILE, tracks=tracks,
                             polyphony=record.get("polyphony", "reject"), transpose=int(record.get("transpose", 0)),
+                            out_of_range=record.get("out_of_range", "reject"),
                             speed=float(record.get("speed", 1.0)), min_hold_ms=int(record.get("min_hold_ms", 35)),
                             safe_gap_ms=int(record.get("safe_gap_ms", 5)),
+                            timing_variation_ms=int(record.get("timing_variation_ms", 15)),
                             clip_start_source_ms=float(record.get("clip_start_source_ms", 0)),
                             clip_end_source_ms=float(clip_end) if clip_end is not None else None)
 
@@ -273,6 +291,7 @@ class Studio(tk.Tk):
                 record["midi_path"], profile_path=DEFAULT_PROFILE,
                 tracks=set(record["tracks"]) or None,
                 polyphony=record["polyphony"], transpose=int(record["transpose"]),
+                out_of_range=record.get("out_of_range", "reject"),
                 speed=float(record["speed"]), min_hold_ms=int(record["min_hold_ms"]),
                 safe_gap_ms=int(record["safe_gap_ms"]),
             )
@@ -284,6 +303,7 @@ class Studio(tk.Tk):
                     updated["midi_path"], profile_path=DEFAULT_PROFILE,
                     tracks=set(updated["tracks"]) or None,
                     polyphony=updated["polyphony"], transpose=int(updated["transpose"]),
+                    out_of_range=updated.get("out_of_range", "reject"),
                     speed=chosen_speed, min_hold_ms=int(updated["min_hold_ms"]),
                     safe_gap_ms=int(updated["safe_gap_ms"]),
                 )

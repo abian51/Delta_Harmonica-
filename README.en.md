@@ -11,9 +11,11 @@ The app itself does not launch a game, access a game process, send live keystrok
 - Import MIDI files and inspect or select tracks
 - Transcribe a clear monophonic melody from MP3, WAV, FLAC, or OGG to MIDI
 - Reject polyphonic passages or reduce them to their highest or lowest note
+- Use the harmonica's octave-down (left mouse), semitone-up (middle mouse), and octave-up (right mouse) controls; optionally fold out-of-range notes by octaves
 - Adjust transposition, speed, minimum key-hold time, and safe gaps
 - Preview synthesized audio with animated harmonica holes, keyboard keys, and mouse modifiers
 - Select a segment by dragging both ends of the preview timeline or entering exact times; use the same segment and speed for exports
+- Optionally vary whole-note timing by 0–15 ms where there is enough free space, without changing key-hold duration
 - Configure harmonica key mapping in JSON and manage a local song library
 - Export a JSON timeline, CSV event list, and GG API events
 - Create an unbound macro through the local SteelSeries GG Engine interface
@@ -51,13 +53,16 @@ Double-click `启动_Delta_Harmonica.bat` in the project root, or run:
 ## Desktop workflow
 
 1. Click “导入 MIDI” (Import MIDI), “导入音频” (Import Audio), or “三音样本” (Three-note sample).
-2. Select a song and tracks, then choose the polyphony policy, transposition, export speed, and other settings.
+2. Select a song and tracks, then choose the polyphony policy, transposition, export speed, and other settings. “随机微调 ms” (Random Timing Variation) defaults to 15; set it to 0 to disable it.
+   If the MIDI still contains unplayable notes, set “超音域处理” (Out-of-range handling) to `octave_fold`. This shifts only unplayable notes by whole octaves, changing their actual pitch. The default `reject` never silently changes the score.
 3. Click “试听预览” (Preview). The window plays a synthesized guide tone and highlights harmonica holes, keyboard keys, and mouse modifiers. Drag the two blue timeline handles to select a segment, or enter its start/end times in seconds and click “应用” (Apply). The preview speed and selected segment sync to the main window and are used by all subsequent exports. “恢复全曲” (Full song) clears the trim.
 4. Click “生成时间轴” (Generate Timeline) to write reviewable files without creating a device macro.
 5. Click “生成并创建 GG 宏” (Generate and Create GG Macro) to confirm and create an unbound macro. Find the new `DHS_` macro in GG and bind it manually.
 6. For another device, choose a format under “外设格式” (Device Format) and click “导出外设宏” (Export Device Macro).
 
 Creating a GG macro does not overwrite an existing macro or change a device binding. The preview uses MIDI-based synthesized audio—not the original MP3 or the game's harmonica sound—and never sends keystrokes. Preview playback is limited to 10 minutes; longer songs can still be converted and exported.
+
+Timing variation affects exported files only; the preview plays the unmodified reference rhythm. Each note's modifiers, key-down, and key-up move together, preserving its hold duration. When a gap is too short, the variation is reduced or skipped. This does not guarantee avoidance of any detection system; follow the target software's rules.
 
 ### Device formats
 
@@ -90,11 +95,13 @@ Common options:
 
 - `--track N`: Select a track; repeat for multiple tracks
 - `--polyphony reject|highest|lowest`: Polyphony handling
+- `--out-of-range reject|octave_fold`: Out-of-range handling; defaults to rejection
 - `--transpose N`: Transpose by semitones
 - `--speed N`: Playback/export speed multiplier
 - `--min-hold N`: Minimum key-hold duration in milliseconds
 - `--safe-gap N`: Minimum gap between actions in milliseconds
 - `--clip-start N` and `--clip-end N`: Optional segment boundaries in milliseconds of the original MIDI
+- `--timing-variation N`: Optional random timing variation of 0–15 ms for exports; the CLI default is 0
 
 List GG macros without changing them:
 
@@ -136,7 +143,7 @@ Each conversion writes:
 
 ## Key mapping
 
-The example configuration is [profiles/harmonica.example.json](profiles/harmonica.example.json). You can change its pitch range, natural-note keys, and accidental modifiers. It is a desktop-test example, not a verified in-game layout. Check every pitch and key for your target application before actual use.
+The example configuration is [profiles/harmonica.example.json](profiles/harmonica.example.json). The keys `Z X C V B N M ,` correspond to scale degrees `1 2 3 4 5 6 7 high-1`. Left mouse shifts the row down 12 semitones, middle mouse adds one semitone, and right mouse shifts it up 12 semitones. With the current assumed C4 base (MIDI 60), the playable range is MIDI 48–85. The mouse-control interpretation follows a [community project](https://github.com/LianZiZhou/HarmonicaScript); the absolute base pitch still needs in-game calibration.
 
 ## Safety and privacy
 
@@ -166,6 +173,7 @@ Code is under `src/dhs`, tests under `tests`. GG requests go through `tools/gg_e
 
 - MIDI conversion: automated tests pass.
 - Preview trimming and exported timelines: automated tests pass, including proper key release when trimming through a sustained note.
+- Timing variation: key pairing, hold duration, and safe-gap tests pass; no anti-detection guarantee is made.
 - MP3/WAV single-tone transcription: synthetic-audio tests pass; accuracy on real songs depends on the source.
 - Razer, Logitech, AutoHotkey, and JSON exports: file-structure tests pass; imports into the respective vendor software and devices have not been tested here.
 - GG macro creation and immediate readback: verified. Persistence after restarting GG and playback through a bound device have not yet been verified.
