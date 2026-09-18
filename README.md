@@ -26,7 +26,7 @@ Delta Harmonica Studio 是一个 Windows 桌面工具，用于把 MIDI 或单旋
 
 - Windows 10 或 Windows 11
 - Python 3.11 或更高版本
-- SteelSeries GG（创建宏时需要正在运行）
+- SteelSeries GG（如需修改赛睿的宏，则此条为必须，创建宏时需要正在运行）
 
 当前 Engine 接口适配基于 SteelSeries GG 119 完成验证。该接口不是 SteelSeries 面向第三方发布的稳定 API，GG 升级后可能需要重新验证。
 
